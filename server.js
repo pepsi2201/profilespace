@@ -143,4 +143,18 @@ app.get("/api/users",(req,res)=>{
  const rows=db.prepare("SELECT id,nickname,about,hobbies,photo FROM users ORDER BY id DESC LIMIT 100").all();
  res.json(rows.map(x=>({...x,hobbies:x.hobbies?x.hobbies.split(",").filter(Boolean):[]})));
 });
-app.listen(PORT,HOST,()=>console.log(`ProfileSpace: http://${HOST}:${PORT}`));
+app.get("/", (req, res) => {
+  res.status(200).send(`
+    <html>
+      <head><title>ProfileSpace</title></head>
+      <body style="background:#111;color:white;font-family:Arial;text-align:center;padding:100px">
+        <h1>ProfileSpace работает!</h1>
+        <p>Сервер успешно запущен на Render.</p>
+      </body>
+    </html>
+  `);
+});
+
+app.listen(PORT, HOST, () => {
+  console.log("ProfileSpace server started on port " + PORT);
+});
