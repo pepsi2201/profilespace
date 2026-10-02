@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ProfileSpace</title><style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial;background:#0d1020;color:#fff;min-height:100vh}body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 15% 10%,#7658ff44,transparent 35%),radial-gradient(circle at 90% 80%,#00c2ff22,transparent 35%);pointer-events:none}.wrap{max-width:760px;margin:auto;padding:25px 16px}.card{background:#171a2b;border:1px solid #ffffff12;border-radius:22px;padding:25px;box-shadow:0 20px 70px #0007;margin-bottom:18px;animation:in .45s ease}.hidden{display:none!important}@keyframes in{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}h1{margin:0 0 8px}.muted{color:#9da3bd}.nav{display:flex;gap:8px;margin-bottom:18px}.nav button{width:auto;margin:0;background:#252a40}button{border:0;border-radius:12px;padding:13px 17px;background:linear-gradient(135deg,#7658ff,#4f8cff);color:#fff;font-weight:700;cursor:pointer}input,textarea{width:100%;background:#0f1220;color:white;border:1px solid #ffffff15;border-radius:12px;padding:13px;margin:7px 0 13px;font:inherit}textarea{min-height:110px;resize:vertical}.err{color:#ff8294;min-height:18px;font-size:13px}.avatar{width:90px;height:90px;border-radius:50%;object-fit:cover;background:#252a40}.row{display:flex;gap:14px;align-items:center}.post{padding:18px 0;border-top:1px solid #ffffff10;animation:in .35s ease}.post:first-child{border-top:0}.post .avatar{width:44px;height:44px}.posthead{display:flex;gap:10px;align-items:center}.date{font-size:12px;color:#737a93}.posttext{white-space:pre-wrap;line-height:1.6;margin:13px 0}.chips{display:flex;gap:7px;flex-wrap:wrap}.chip{background:#252a40;padding:7px 10px;border-radius:20px;font-size:12px}.actions{display:flex;gap:10px;align-items:center}.actions button{margin-top:5px}.secondary{background:#252a40}.auth{max-width:430px;margin:12vh auto}.small{width:44px;height:44px}
+</style></head><body><main class="wrap">
+
+<section id="auth" class="card auth"><h1>ProfileSpace</h1><p class="muted">Создай профиль и общайся с другими пользователями.</p>
+<div id="reg"><label>Email</label><input id="rEmail" type="email"><label>Пароль</label><input id="rPass" type="password"><label>Никнейм</label><input id="rNick"><div id="rErr" class="err"></div><button onclick="register()">Зарегистрироваться</button><p class="muted" style="font-size:12px;margin-top:14px">Регистрация работает прямо на публичном сайте.</p><p class="muted" onclick="toggleAuth()" style="cursor:pointer;text-align:center">Уже есть аккаунт? Войти</p></div>
+<div id="login" class="hidden"><label>Email</label><input id="lEmail" type="email"><label>Пароль</label><input id="lPass" type="password"><div id="lErr" class="err"></div><button onclick="login()">Войти</button><p class="muted" onclick="toggleAuth()" style="cursor:pointer;text-align:center">Создать аккаунт</p></div></section>
+
+<section id="app" class="hidden"><nav class="nav"><button onclick="view('feed')">Лента</button><button onclick="view('profile')">Профиль</button><button onclick="view('users')">Пользователи</button><button onclick="view('messages')">Сообщения</button><button class="secondary" onclick="logout()">Выйти</button></nav>
+
+<div id="feed" class="card"><h1>Лента</h1><p class="muted">Здесь публикации всех зарегистрированных пользователей.</p>
+<textarea id="post" maxlength="1000" placeholder="Что у тебя нового?"></textarea><div class="actions"><span id="count" class="muted">0 / 1000</span><button onclick="publish()">Опубликовать</button></div><div id="pErr" class="err"></div><hr style="border-color:#ffffff10;margin:22px 0"><div id="posts"></div></div>
+
+<div id="profile" class="card hidden"><h1>Мой профиль</h1><div class="row"><img id="myPhoto" class="avatar"><div><b id="myNick"></b><p id="myAbout" class="muted"></p></div></div><p><b>Хобби</b></p><div id="myHobbies" class="chips"></div><hr style="border-color:#ffffff10;margin:22px 0"><h3>Редактировать</h3><input id="eNick" placeholder="Никнейм"><textarea id="eAbout" placeholder="О себе"></textarea><input id="eHobbies" placeholder="Музыка, игры, спорт"><input id="ePhoto" type="file" accept="image/*"><div id="eErr" class="err"></div><button onclick="saveProfile()">Сохранить</button></div>
+
+<div id="users" class="card hidden"><h1>Пользователи</h1><p class="muted">Найди человека, подпишись или напиши ему.</p><div id="userList"></div></div>
+<div id="messages" class="card hidden"><h1>Сообщения</h1><p id="chatTitle" class="muted">Выбери пользователя в разделе «Пользователи».</p><div id="chat" style="max-height:430px;overflow:auto"></div><div class="actions"><input id="msg" placeholder="Написать сообщение..." style="margin:12px 0 0"><button onclick="sendMessage()">Отправить</button></div><div id="mErr" class="err"></div></div>
+</section></main>
+<script>
+const $=id=>document.getElementById(id);let me=null,chatUser=null;
+function toggleAuth(){$("reg").classList.toggle("hidden");$("login").classList.toggle("hidden")}
+const API_BASE=window.location.origin;
+async function api(url,opt={}){
+ try{
+  const target=new URL(url,API_BASE).href;
+  const options={credentials:"include",...opt};
+  const r=await fetch(target,options);
+  const text=await r.text();
+  let d={};
+  try{d=text?JSON.parse(text):{};}catch{d={error:text||"Сервер вернул неверный ответ"};}
+  if(!r.ok)throw Error(d.error||("Ошибка сервера ("+r.status+")"));
+  return d;
+ }catch(e){
+  if(e instanceof TypeError)throw Error("Не удалось подключиться к API. Проверь интернет и попробуй ещё раз.");
+  throw e;
+ }
+}
+async function register(){try{let d=await api("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("rEmail").value,password:$("rPass").value,nickname:$("rNick").value})});me=d.user;enter()}catch(e){$("rErr").textContent=e.message}}
+async function login(){try{let d=await api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("lEmail").value,password:$("lPass").value})});me=d.user;enter()}catch(e){$("lErr").textContent=e.message}}
+async function logout(){await api("/api/logout",{method:"POST"});me=null;$("app").classList.add("hidden");$("auth").classList.remove("hidden")}
+function enter(){$("auth").classList.add("hidden");$("app").classList.remove("hidden");fillMe();view("feed")}
+function view(id){["feed","profile","users","messages"].forEach(x=>$(x).classList.toggle("hidden",x!==id));if(id==="feed")loadPosts();if(id==="users")loadUsers();if(id==="profile")fillMe();if(id==="messages"&&chatUser)loadChat()}
+function fillMe(){if(!me)return;$("myPhoto").src=me.photo||"/default.svg";$("myNick").textContent=me.nickname;$("myAbout").textContent=me.about||"Пока ничего не указано."; $("myHobbies").innerHTML=me.hobbies.map(x=>`<span class=chip>${esc(x)}</span>`).join("");$("eNick").value=me.nickname;$("eAbout").value=me.about;$("eHobbies").value=me.hobbies.join(", ")}
+async function saveProfile(){try{let f=new FormData();f.append("nickname",$("eNick").value);f.append("about",$("eAbout").value);f.append("hobbies",$("eHobbies").value.split(",").map(x=>x.trim()).filter(Boolean).join(","));if($("ePhoto").files[0])f.append("photo",$("ePhoto").files[0]);me=(await api("/api/profile",{method:"PUT",body:f})).user;fillMe();$("eErr").textContent=""}catch(e){$("eErr").textContent=e.message}}
+async function publish(){try{await api("/api/posts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:$("post").value})});$("post").value="";$("count").textContent="0 / 1000";$("pErr").textContent="";loadPosts()}catch(e){$("pErr").textContent=e.message}}
+$("post").addEventListener("input",()=>$("count").textContent=$("post").value.length+" / 1000");
+async function loadPosts(){let a=await api("/api/posts");$("posts").innerHTML=a.length?a.map(p=>`<article class=post><div class=posthead><img class="avatar" src="${p.photo||"/default.svg"}"><div><b>${esc(p.nickname)}</b><div class=date>${new Date(p.created_at+"Z").toLocaleString("ru-RU")}</div></div></div><div class=posttext>${esc(p.text)}</div><div class="actions"><button class="secondary like" onclick="likePost(${p.id})">${p.liked?"♥":"♡"} ${p.likes}</button></div></article>`).join(""):"<p class=muted>Пока нет публикаций.</p>"}
+async function loadUsers(){let a=await api("/api/users");$("userList").innerHTML=a.map(u=>`<div class=row style="padding:13px 0;border-bottom:1px solid #ffffff10"><img class="avatar small" src="${u.photo||"/default.svg"}"><div style="flex:1"><b>${esc(u.nickname)}</b><div class=muted>${esc(u.about||"")}</div></div><button class=secondary onclick="openChat(${u.id},'${esc(u.nickname)}')">Написать</button>${u.id!==me.id?`<button onclick="follow(${u.id})">Подписаться</button>`:""}</div>`).join("")}
+async function likePost(id){await api("/api/posts/"+id+"/like",{method:"POST"});loadPosts()}
+async function follow(id){await api("/api/follow/"+id,{method:"POST"});alert("Готово");}
+function openChat(id,name){chatUser=id;$("chatTitle").textContent="Чат с "+name;view("messages");loadChat()}
+async function loadChat(){if(!chatUser)return;let a=await api("/api/messages/"+chatUser);$("chat").innerHTML=a.map(m=>`<div style="padding:9px 0;text-align:${m.sender_id===me.id?"right":"left"}"><span style="display:inline-block;background:${m.sender_id===me.id?"#4f8cff":"#252a40"};padding:9px 12px;border-radius:13px;max-width:80%">${esc(m.text)}</span></div>`).join("")||'<p class=muted>Начните разговор.</p>';$("chat").scrollTop=$("chat").scrollHeight}
+async function sendMessage(){if(!chatUser)return;$("mErr").textContent="";try{await api("/api/messages/"+chatUser,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:$("msg").value})});$("msg").value="";loadChat()}catch(e){$("mErr").textContent=e.message}}
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+(async()=>{
+ try{
+  const health=await api("/api/health");
+  if(!health.ok)throw Error("API недоступен");
+  const d=await api("/api/me");
+  if(d.user){me=d.user;enter()}
+ }catch(e){console.warn("ProfileSpace API:",e);}
+})();
+</script></body></html>
